@@ -22,7 +22,7 @@ def backtest_equity(data, starting_equity=int(1000), leverage=1, commission=0.00
     buyandhold_curve = []
 
     first = True
-    for period in tqdm(data.values, total=len(data)):
+    for period in data.values:
         if first == False:
             buyandhold_equity = buyandhold_equity * (1 + leverage * period[0])
             if current_position == 1:
@@ -81,7 +81,7 @@ def leaveoneout_predict(data, model, mode='Timeseries', modelDir="models/", outp
 
     predictions = []
     scores = {'validation': []}
-    for i, j in tqdm(split.split(data), total=len(data)):
+    for i, j in split.split(data):
         train, validation = {}, {}
         train_data = data.iloc[i]
         validation_data = data.iloc[j]
@@ -241,7 +241,7 @@ def test_starting_point(starting_point, plots=["zoomed", "volatility", "residual
     # GENERATE SIGNALS
     signals = []
 
-    for index, period in tqdm(merged_filled.iterrows()):
+    for index, period in merged_filled.iterrows():
         if period['close'] <= period['lower_band']:
             signals.append(0.5)
         elif period['close'] <= period['midpoint']:
@@ -266,7 +266,9 @@ def test_starting_point(starting_point, plots=["zoomed", "volatility", "residual
     inventories = []
     dca_inventories = []
 
-    for index, period in tqdm(closes.iterrows()):
+    inventories = pd.DataFrame(columns=['inventory', 'dca_inventory'], dtype=float)
+
+    for index, period in closes.iterrows():
         allocation = (daily_allocation * period[0])
         if allocation <= remaining_allocation:
             inventory += allocation/period['close']
@@ -281,25 +283,31 @@ def test_starting_point(starting_point, plots=["zoomed", "volatility", "residual
                 inventory += remaining_allocation/period['close']
             remaining_allocation = daily_allocation
             dca_inventory += daily_allocation/period['close']
+            inventories.loc[index, 'dca_inventory'] = dca_inventory
 
         # STORE RESULTS
-        inventories.append(inventory)
-        dca_inventories.append(dca_inventory)
+        inventories.loc[index, 'inventory'] = inventory
 
-    inventories = pd.DataFrame({'inventory': inventories, 'dca_inventory': dca_inventories})
+    inventories['dca_inventory'].interpolate(inplace=True)
     inventories['ratio'] = inventories['inventory'] / inventories['dca_inventory']
-    inventories['ratio_avg'] = inventories['ratio']
+    # inventories['ratio_avg'] = inventories['ratio']
     if "inventories" in plots:
+        inventories[['inventory', 'dca_inventory']].iloc[:200].plot()
+        plt.show()
+
+    if "ratio" in plots:
         inventories[['ratio']].iloc[:200].plot()
         plt.show()
 
-    return inventories
+    return inventories[['ratio']].values[:200][:,0]
 
-# min = 0
-# max = 0.75
-# ns = random.sample(min, max, 1000)
-#
-# for i in range(0,1000):
-#     n = ns[i]
+max = 0.8
+trials = 100
 
-test_starting_point(0, plots=["inventories"])
+random_tests = pd.DataFrame()
+for i in tqdm(range(0,trials), total=trials):
+    n = random.randint(0, 80)/100
+    random_tests[str(i)] = test_starting_point(n, plots=[])
+
+random_tests.plot()
+plt.show()
