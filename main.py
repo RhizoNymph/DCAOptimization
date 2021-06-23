@@ -304,10 +304,25 @@ def test_starting_point(starting_point, plots=["zoomed", "volatility", "residual
 max = 0.8
 trials = 100
 
-random_tests = pd.DataFrame()
-for i in tqdm(range(0,trials), total=trials):
-    n = random.randint(0, 80)/100
-    random_tests[str(i)] = test_starting_point(n, plots=[])
+if not os.path.exists('monte_carlo.pkl'):
+    random_tests = pd.DataFrame()
+    for i in tqdm(range(0,trials), total=trials):
+        n = random.randint(0, 80)/100
+        random_tests[str(i)] = test_starting_point(n, plots=[])
 
-random_tests.plot()
+    random_tests['avg'] = random_tests.mean(axis=1)
+    random_tests['max'] = random_tests.max(axis=1)
+    random_tests['min'] = random_tests.min(axis=1)
+    random_tests['med'] = random_tests.median(axis=1)
+
+    with open('monte_carlo.pkl', 'wb') as f:
+        pickle.dump(random_tests, f)
+else:
+    with open('monte_carlo.pkl', 'rb') as f:
+        random_tests = pickle.load(f)
+
+fig, ax = plt.subplots(2)
+random_tests[['avg', 'min', 'max', 'med']].plot(ax=ax[0])
+random_tests.drop(['avg', 'min', 'max', 'med'], axis=1).plot(ax=ax[1], legend=False)
+plt.title("DCA Optimization Monte Carlo")
 plt.show()
