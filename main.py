@@ -81,7 +81,7 @@ def leaveoneout_predict(data, model, mode='Timeseries', modelDir="models/", outp
 
     predictions = []
     scores = {'validation': []}
-    for i, j in split.split(data):
+    for i, j in tqdm(split.split(data), total=len(data)):
         train, validation = {}, {}
         train_data = data.iloc[i]
         validation_data = data.iloc[j]
@@ -116,7 +116,7 @@ def leaveoneout_predict(data, model, mode='Timeseries', modelDir="models/", outp
 
 def test_starting_point(starting_point, plots=["zoomed", "volatility", "residuals", "inventories"], timeframe="D"):
     # LOAD DATA
-    df = pd.read_csv('BITMEX_XBTUSD, 1D.csv', index_col=['time'])
+    df = pd.read_csv('ETH_1D.csv', index_col=['time'])
 
     # CHANGE STARTING POINT
     df = df.iloc[floor(len(df)*starting_point):]
@@ -209,7 +209,7 @@ def test_starting_point(starting_point, plots=["zoomed", "volatility", "residual
 
     bands = close[['upper_band', 'lower_band']]
 
-    df6 = pd.read_csv("BITMEX_XBTUSD, 360.csv", index_col=['time'])
+    df6 = pd.read_csv("ETH_360.csv", index_col=['time'])
     df6 = df6[['close']]
 
     merged = df6.join(bands,sort=True)
@@ -306,7 +306,7 @@ trials = 100
 
 if not os.path.exists('monte_carlo.pkl'):
     random_tests = pd.DataFrame()
-    for i in tqdm(range(0,trials), total=trials):
+    for i in range(0,trials):
         n = random.randint(0, 80)/100
         random_tests[str(i)] = test_starting_point(n, plots=[])
 
