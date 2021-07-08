@@ -1,3 +1,4 @@
+from numpy import csingle
 from web3 import Web3
 import json
 
@@ -6,6 +7,11 @@ from pprint import pprint
 
 from datetime import datetime
 import pause
+
+import os
+import sqlite3
+
+import pandas as pd
 
 def run_query(subgraph, query):
 
@@ -41,3 +47,28 @@ def getPrice(mode='tick'):
     return price
   else:
     raise Exception('mode must be \'tick\' or \'date\'')
+
+def startup():
+  pass
+def getMostRecent():
+  if os.path.exists('data.db'):
+    con = sqlite3.connect('data.db')
+    cur = con.cursor()
+
+    # for row in cur.execute('SELECT * FROM closes ORDER BY time'):
+
+def csvToSqlite(file): 
+  df = pd.read_csv(file)
+  df = df[['time', 'close']]
+  df['time'] = pd.to_datetime(df['time'])
+  df.sort_values(by=['time'])
+  con = sqlite3.connect('data.db')
+  df.to_sql('closes', con)
+  con.close()
+
+csvToSqlite('ETH_1D.csv')
+con = sqlite3.connect('data.db')
+cur = con.cursor()
+
+for row in cur.execute('SELECT * FROM closes ORDER BY time'):
+  print(row)
