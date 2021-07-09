@@ -13,6 +13,8 @@ import sqlite3
 
 import pandas as pd
 
+from configparser import ConfigParser
+
 def run_query(subgraph, query):
 
     request = requests.post(subgraph,
@@ -57,18 +59,38 @@ def getMostRecent():
 
     # for row in cur.execute('SELECT * FROM closes ORDER BY time'):
 
-def csvToSqlite(file): 
+def csvToSqlite(db, file, cur, cols, timecol=None, mode='replace'):
+  tablename = file.split('.csv')[0]
+  tables = cur.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
+  if tablename in tables:
+    if mode == 'replace':     
+        cur.execute('DROP TABLE :table', {'table': tablename})  
+    elif mode == 'fail':
+      raise Exception('table exists and mode set to fail')
+    elif mode == 'continue':
+      return
+    else:
+      raise Exception('mode must be replace or fail')
+  
   df = pd.read_csv(file)
-  df = df[['time', 'close']]
-  df['time'] = pd.to_datetime(df['time'])
-  df.sort_values(by=['time'])
+  df = df[cols]
+
+  if timecol != None:
+    df[timecol] = pd.to_datetime(df[timecol])
+    df.sort_values(by=[timecol])
+
+  df.to_sql(tablename, con)
+
+# MAIN    
+if not os.path.exists('data.db'):
+  cfg = ConfigParser()
+  cfg.read('csvs.cfg')
+
+  dailies = cfg['CSVS']['csvs_1D'].split(',')
+  sixhour = cfg['CSVS']['csvs_360'].split(',')
+
   con = sqlite3.connect('data.db')
-  df.to_sql('closes', con)
-  con.close()
+  cur = con.cursor()
 
-csvToSqlite('ETH_1D.csv')
-con = sqlite3.connect('data.db')
-cur = con.cursor()
-
-for row in cur.execute('SELECT * FROM closes ORDER BY time'):
-  print(row)
+  for each in dailies+sixhour:
+    csvToSqlite('data.db', cur, each, ['time', 'close'], 'time')
